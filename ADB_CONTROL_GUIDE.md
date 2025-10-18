@@ -26,7 +26,7 @@ adb shell am start -a com.github.metacubex.clash.meta.action.TOGGLE_CLASH com.gi
 ### 4. 使用指定配置文件切换配置
 ```bash
 adb shell am start -a com.github.metacubex.clash.meta.action.SWITCH_TO_CONFIG \
-    --es config_path "/sdcard/Download/config.yaml" \
+    --es config_path "/sdcard/Android/data/{package_name}/files/config.yaml" \
     com.github.metacubex.clash/.ExternalControlActivity
 ```
 
@@ -38,7 +38,7 @@ adb shell am start -a com.github.metacubex.clash.meta.action.SWITCH_TO_URL \
 ```
 
 ## 参数说明
-- `--es config_path`: 指定配置文件的完整路径，例如 `/sdcard/Download/config.yaml`
+- `--es config_path`: 指定配置文件的完整路径，例如 `/sdcard/Android/data/{package_name}/files/config.yaml`
 - `--es config_url`: 指定网络配置文件的URL，例如 `https://example.com/config.yaml`
 - 配置文件必须是 Clash Meta 兼容的 YAML 格式文件
 - URL配置文件支持HTTP和HTTPS协议
