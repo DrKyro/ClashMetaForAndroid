@@ -91,8 +91,8 @@ subprojects {
 
                 buildConfigField("boolean", "PREMIUM", "Boolean.parseBoolean(\"false\")")
 
-                resValue("string", "launch_name", "@string/launch_name_alpha")
-                resValue("string", "application_name", "@string/application_name_alpha")
+                resValue("string", "launch_name", "Clash Meta Alpha")
+                resValue("string", "application_name", "Clash Meta Alpha")
 
                 if (isApp) {
                     applicationIdSuffix = ".alpha"
@@ -106,8 +106,8 @@ subprojects {
 
                 buildConfigField("boolean", "PREMIUM", "Boolean.parseBoolean(\"false\")")
 
-                resValue("string", "launch_name", "@string/launch_name_meta")
-                resValue("string", "application_name", "@string/application_name_meta")
+                resValue("string", "launch_name", "Clash Meta")
+                resValue("string", "application_name", "Clash Meta")
 
                 if (isApp) {
                     applicationIdSuffix = ".meta"
