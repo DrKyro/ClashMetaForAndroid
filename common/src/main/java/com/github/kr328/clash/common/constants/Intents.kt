@@ -8,8 +8,12 @@ object Intents {
     val ACTION_START_CLASH = "$packageName.action.START_CLASH"
     val ACTION_STOP_CLASH = "$packageName.action.STOP_CLASH"
     val ACTION_TOGGLE_CLASH = "$packageName.action.TOGGLE_CLASH"
+    val ACTION_SWITCH_TO_CONFIG = "$packageName.action.SWITCH_TO_CONFIG"
+    val ACTION_SWITCH_TO_URL = "$packageName.action.SWITCH_TO_URL"
 
     const val EXTRA_NAME = "name"
+    const val EXTRA_CONFIG_PATH = "config_path"
+    const val EXTRA_CONFIG_URL = "config_url"
 
     // Self
     val ACTION_SERVICE_RECREATED = "$packageName.intent.action.CLASH_RECREATED"

@@ -37,6 +37,8 @@ object ProfileProcessor {
                     val pending = PendingDao().queryByUUID(uuid)
                         ?: throw IllegalArgumentException("profile $uuid not found")
 
+                    Log.i("Applying profile: $uuid, type: ${pending.type}, source: ${pending.source}")
+                    
                     pending.enforceFieldValid()
 
                     context.processingDir.deleteRecursively()
@@ -45,12 +47,48 @@ object ProfileProcessor {
                     context.pendingDir.resolve(pending.uuid.toString())
                         .copyRecursively(context.processingDir, overwrite = true)
 
+                    // Log the config file content for debugging
+                    val configFile = context.processingDir.resolve("config.yaml")
+                    if (configFile.exists()) {
+                        val content = configFile.readText()
+                        Log.i("Config file content: $content")
+                        Log.i("Config file size: ${configFile.length()} bytes")
+                        
+                        // Check if the config contains required sections
+                        if (!content.contains("proxies:") && !content.contains("proxy-providers:")) {
+                            Log.e("Config file validation failed: missing 'proxies' or 'proxy-providers' section")
+                            throw IllegalArgumentException("profile does not contain `proxies` or `proxy-providers`")
+                        }
+                    } else {
+                        Log.w("Config file does not exist at ${configFile.absolutePath}")
+                        
+                        // List all files in the processing directory for debugging
+                        val files = context.processingDir.listFiles()
+                        if (files != null) {
+                            Log.w("Files in processing directory: ${files.map { it.name }}")
+                            // Log content of all files to help debug
+                            files.forEach { file ->
+                                if (file.isFile && file.length() < 10000) { // Only log small files
+                                    try {
+                                        Log.w("Content of ${file.name}: ${file.readText()}")
+                                    } catch (e: Exception) {
+                                        Log.w("Failed to read ${file.name}: ${e.message}")
+                                    }
+                                }
+                            }
+                        } else {
+                            Log.w("Processing directory is empty or does not exist")
+                        }
+                    }
+
                     pending
                 }
 
                 val force = snapshot.type != Profile.Type.File
                 var cb = callback
 
+                Log.i("Calling fetchAndValid with force: $force")
+                
                 Clash.fetchAndValid(context.processingDir, snapshot.source, force) {
                     try {
                         cb?.updateStatus(it)
@@ -253,11 +291,21 @@ object ProfileProcessor {
             source.isEmpty() && type != Profile.Type.File ->
                 throw IllegalArgumentException("Invalid url")
 
-            source.isNotEmpty() && scheme != "https" && scheme != "http" && scheme != "content" ->
+            source.isNotEmpty() && scheme != "https" && scheme != "http" && scheme != "content" && 
+                !(type == Profile.Type.File && source.startsWith("/")) ->
                 throw IllegalArgumentException("Unsupported url $source")
 
             interval != 0L && TimeUnit.MILLISECONDS.toMinutes(interval) < 15 ->
                 throw IllegalArgumentException("Invalid interval")
+        }
+        
+        // Add validation for File type to ensure it has a valid file path
+        if (type == Profile.Type.File) {
+            Log.i("Validating File type profile with source: $source")
+            if (!source.startsWith("/")) {
+                Log.e("File type profile source must start with /: $source")
+                throw IllegalArgumentException("File type profile source must start with /: $source")
+            }
         }
     }
 }

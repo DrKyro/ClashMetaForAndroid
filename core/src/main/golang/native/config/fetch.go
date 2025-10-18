@@ -50,6 +50,9 @@ func fetch(url *U.URL, file string) error {
 		reader, err = openUrl(ctx, url.String())
 	case "content":
 		reader, err = openContent(url.String())
+	case "file":
+		// Handle local file scheme
+		reader, err = os.Open(url.Path)
 	default:
 		err = fmt.Errorf("unsupported scheme %s of %s", url.Scheme, url)
 	}

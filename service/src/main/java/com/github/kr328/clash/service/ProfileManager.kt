@@ -9,6 +9,7 @@ import com.github.kr328.clash.service.data.PendingDao
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.remote.IFetchObserver
 import com.github.kr328.clash.service.remote.IProfileManager
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.directoryLastModified
 import com.github.kr328.clash.service.util.generateProfileUUID
@@ -91,28 +92,118 @@ class ProfileManager(private val context: Context) : IProfileManager,
     }
 
     override suspend fun patch(uuid: UUID, name: String, source: String, interval: Long) {
+        Log.i("Patching profile: uuid=$uuid, name=$name, source=$source, interval=$interval")
+        
         val pending = PendingDao().queryByUUID(uuid)
 
         if (pending == null) {
+            Log.i("No pending profile found, checking imported profile")
             val imported = ImportedDao().queryByUUID(uuid)
                 ?: throw FileNotFoundException("profile $uuid not found")
 
+            Log.i("Found imported profile: type=${imported.type}, source=${imported.source}")
             cloneImportedFiles(uuid)
+            
+            // For File type profiles, copy the actual file content
+            if (imported.type == Profile.Type.File && source.startsWith("/")) {
+                try {
+                    val sourceFile = java.io.File(source)
+                    val targetDir = context.pendingDir.resolve(uuid.toString())
+                    val targetFile = targetDir.resolve("config.yaml")
+                    
+                    Log.i("Source file path: $source")
+                    Log.i("Source file exists: ${sourceFile.exists()}")
+                    Log.i("Source file readable: ${sourceFile.canRead()}")
+                    Log.i("Source file size: ${sourceFile.length()} bytes")
+                    Log.i("Target directory: ${targetDir.absolutePath}")
+                    Log.i("Target directory exists: ${targetDir.exists()}")
+                    
+                    if (!targetDir.exists()) {
+                        targetDir.mkdirs()
+                        Log.i("Created target directory")
+                    }
+                    
+                    if (sourceFile.exists()) {
+                        val sourceContent = sourceFile.readText()
+                        Log.i("Source file content preview: ${sourceContent.take(200)}...")
+                        Log.i("Source file content length: ${sourceContent.length}")
+                        
+                        targetFile.writeText(sourceContent)
+                        Log.i("Successfully copied config file, size: ${targetFile.length()} bytes")
+                        Log.i("Target file exists: ${targetFile.exists()}")
+                        
+                        // Verify the content was written correctly
+                        val writtenContent = targetFile.readText()
+                        Log.i("Written content preview: ${writtenContent.take(200)}...")
+                        Log.i("Written content length: ${writtenContent.length}")
+                    } else {
+                        throw FileNotFoundException("Source config file not found: $source")
+                    }
+                } catch (e: Exception) {
+                    Log.e("Failed to copy config file", e)
+                    throw IllegalArgumentException("Failed to copy config file: ${e.message}", e)
+                }
+            }
 
-            PendingDao().insert(
-                Pending(
-                    uuid = imported.uuid,
-                    name = name,
-                    type = imported.type,
-                    source = source,
-                    interval = interval,
-                    upload = 0,
-                    total = 0,
-                    download = 0,
-                    expire = 0,
-                )
+            val newPending = Pending(
+                uuid = imported.uuid,
+                name = name,
+                type = imported.type,
+                source = source,
+                interval = interval,
+                upload = 0,
+                total = 0,
+                download = 0,
+                expire = 0,
             )
+            
+            Log.i("Creating new pending profile: uuid=${newPending.uuid}, type=${newPending.type}, source=${newPending.source}")
+            PendingDao().insert(newPending)
+            Log.i("Successfully created pending profile")
         } else {
+            Log.i("Found existing pending profile: uuid=${pending.uuid}, type=${pending.type}, source=${pending.source}")
+            
+            // For File type profiles, copy the actual file content
+            if (pending.type == Profile.Type.File && source.startsWith("/")) {
+                try {
+                    val sourceFile = java.io.File(source)
+                    val targetDir = context.pendingDir.resolve(uuid.toString())
+                    val targetFile = targetDir.resolve("config.yaml")
+                    
+                    Log.i("Source file path: $source")
+                    Log.i("Source file exists: ${sourceFile.exists()}")
+                    Log.i("Source file readable: ${sourceFile.canRead()}")
+                    Log.i("Source file size: ${sourceFile.length()} bytes")
+                    Log.i("Target directory: ${targetDir.absolutePath}")
+                    Log.i("Target directory exists: ${targetDir.exists()}")
+                    
+                    if (!targetDir.exists()) {
+                        targetDir.mkdirs()
+                        Log.i("Created target directory")
+                    }
+                    
+                    if (sourceFile.exists()) {
+                        val sourceContent = sourceFile.readText()
+                        Log.i("Source file content preview: ${sourceContent.take(200)}...")
+                        Log.i("Source file content length: ${sourceContent.length}")
+                        
+                        targetFile.writeText(sourceContent)
+                        Log.i("Successfully copied config file, size: ${targetFile.length()} bytes")
+                        Log.i("Target file exists: ${targetFile.exists()}")
+                        
+                        // Verify the content was written correctly
+                        val writtenContent = targetFile.readText()
+                        Log.i("Written content preview: ${writtenContent.take(200)}...")
+                        Log.i("Written content length: ${writtenContent.length}")
+                    } else {
+                        throw FileNotFoundException("Source config file not found: $source")
+                    }
+                } catch (e: Exception) {
+                    Log.e("Failed to copy config file", e)
+                    throw IllegalArgumentException("Failed to copy config file: ${e.message}", e)
+                }
+            }
+            
             val newPending = pending.copy(
                 name = name,
                 source = source,
@@ -123,7 +214,9 @@ class ProfileManager(private val context: Context) : IProfileManager,
                 expire = 0,
             )
 
+            Log.i("Updating existing pending profile: uuid=${newPending.uuid}, type=${newPending.type}, source=${newPending.source}")
             PendingDao().update(newPending)
+            Log.i("Successfully updated pending profile")
         }
     }
 
